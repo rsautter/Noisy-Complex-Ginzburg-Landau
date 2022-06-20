@@ -69,8 +69,8 @@ class NCGL():
 	def __getGaussian(self,n,dim):
 		out = np.zeros(np.repeat(n,dim))
 		c = n/2
-		squareDists = np.sum((np.indices(out.shape)-c)**2,as_vs=0)
-		return np.exp(-squareDists/n)
+		squareDists = np.sum((np.indices(out.shape)-c)**2,axis=0)
+		return 2*(np.exp(-squareDists/(20*n))-0.5)
 		
 	def getInitialCondition(self):
 		if self.ic=='r':
@@ -104,6 +104,77 @@ class NCGL():
 			k4 = self.reaction((at+dt*k3), t+dt)
 			at = at + dt*(k1+2*k2+2*k3+k4)/6.
 		return np.array(states)
+		
+	def getNoisyLyapReaction(self,a0=None,beta=0,dt=0.1, nit=3000):
+		'''
+		Returns the lyapunov exponent (spatial part is ignored)
+		
+		The function integrates with rk4 method
+		'''
+		lyap = []
+		delta = 1e-6*(np.random.rand()-0.5)
+		if a0 is None:
+			at = self.a0+delta
+		else:
+			at = a0
+		
+		eta = cNoise.cNoise(beta=beta,shape=(nit+2,),std=1)
+		eta = np.gradient(eta)
+		eta2 = np.gradient(eta)
+		
+		last = a0
+		state = np.identity(3)
+		lyapSpec=[]
+		for i in range(nit):
+			a = np.real(at)
+			b = np.imag(at)
+			c = self.c2
+			
+			t = i*dt
+			if self.noiseType == 'multiplicative':
+				jac = [
+					[1-3*(a**2)-b**2+2*a*b*c+self.sigma_r*eta[i], 	-2*a*b+(a**2)*c+3*(b**2)*c,		self.sigma_r*a-self.sigma_r*b],
+					[-2*a*b-3*(a**2)*c-(b**2)*c, 	1-a**2-3*(b**2)-2*a*b*c+self.sigma_r*eta[i],		self.sigma_r*a+self.sigma_r*b],
+					[0, 		0, 			np.abs(eta2[i]) ]
+				]
+				
+				k1 = self.reaction(at,t)+self.sigma_r*at*self.__interpolate1D(eta,i)
+				k11 = np.dot(jac,state)
+				
+				k2 = self.reaction((at+dt*k1/2), t+dt/2.)+self.sigma_r*(at+dt*k1/2)*self.__interpolate1D(eta,i+0.5)
+				k22 = np.dot(jac,state+dt*k11/2)
+				
+				k3 = self.reaction((at+dt*k2/2), t+dt/2.)+self.sigma_r*(at+dt*k2/2)*self.__interpolate1D(eta,i+0.5)
+				k33 = np.dot(jac,state+dt*k22/2)
+				
+				k4 = self.reaction((at+dt*k3), t+dt)+self.sigma_r*(at+dt*k3)*self.__interpolate1D(eta,i+1)
+				k44 = np.dot(jac,state+dt*k33)
+			else:
+				jac = [
+					[1-3*(a**2)-b**2+2*a*b*c, 	-2*a*b+(a**2)*c+3*(b**2)*c,		self.sigma_r],
+					[-2*a*b-3*(a**2)*c-(b**2)*c, 	1-a**2-3*(b**2)-2*a*b*c,		0],
+					[0, 		0, 				np.abs(eta2[i])  ]
+				]
+				k1 = self.reaction(at,t)+self.sigma_r*self.__interpolate1D(eta,i)				
+				k11 = np.dot(jac,state)
+				
+				k2 = self.reaction((at+dt*k1/2), t+dt/2.)+self.sigma_r*self.__interpolate1D(eta,i+0.5)
+				k22 = np.dot(jac,state+dt*k11/2)
+				
+				k3 = self.reaction((at+dt*k2/2), t+dt/2.)+self.sigma_r*self.__interpolate1D(eta,i+0.5)
+				k33 = np.dot(jac,state+dt*k22/2)
+				
+				k4 = self.reaction((at+dt*k3), t+dt)+self.sigma_r*self.__interpolate1D(eta,i+1)
+				k44 = np.dot(jac,state+dt*k33)
+				
+			at = at + dt*(k1+2*k2+2*k3+k4)/6.
+			state = state + dt*(k11+2*k22+2*k33+k44)/6.
+			#print(np.abs(at-last))
+			state, r = np.linalg.qr(state) 
+			lyapSpec.append(np.abs(np.diag(r)))
+			last = at
+		return np.average(np.log(lyapSpec[-nit//4:]),axis=0)/dt
+				
 	
 	def __interpolate1D(self,noise,t):
 		p1, p2 = int(np.floor(t)),int(np.ceil(t))
@@ -251,8 +322,6 @@ class NCGL():
 		tnr1,tnr2 = self.interpolateNoise(normalizedTime)
 		
 		lap  =    np.real(ifftn(-(fx[None,:]**2)*rFtState -(fy[:,None]**2)* rFtState )) + 1j*np.real(ifftn(-(fx[None,:]**2)*iFtState -(fy[:,None]**2)* iFtState ))/(self.h**2)
-		#adv  =    np.real(ifftn(fx[None,:]*1j*rFtState + 1j*fy[:,None]* rFtState )) + 1j*np.real(ifftn(1j*fx[None,:]*iFtState +1j*fy[:,None]* iFtState ))/(self.h)
-		#unitary = lap / np.abs(lap)
 		
 		if self.noiseType == 'diffusive':
 			return (1+self.c1*1j)*np.array(lap) + self.reaction(state,time) + self.sigma_r*lap*tnr2/np.abs(lap)
