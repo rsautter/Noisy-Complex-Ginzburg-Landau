@@ -16,8 +16,7 @@ Some example of iteration is presented [here](https://github.com/rsautter/Noisy-
 
 
 
-
-https://user-images.githubusercontent.com/14216783/224127264-21517c26-7a5c-4db1-97e5-014f671261e7.mp4
+https://user-images.githubusercontent.com/14216783/224129416-69f13958-8244-4741-9cf3-d6b9e51144e2.mp4
 
 
 ## SCGL
