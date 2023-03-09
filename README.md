@@ -14,12 +14,16 @@ The implementation file is [this](https://github.com/rsautter/Noisy-Complex-Ginz
 
 Some example of iteration is presented [here](https://github.com/rsautter/Noisy-Complex-Ginzburg-Landau/blob/main/CGL_Example.ipynb).
 
-We are pleased to offer snapshots of the simulation upon request. 
 
-## Noise Examples
+
+
+https://user-images.githubusercontent.com/14216783/224127264-21517c26-7a5c-4db1-97e5-014f671261e7.mp4
 
 
 ## SCGL
+
+
+## Noise Examples
 
 
 ## Multidimension CGL
