@@ -49,7 +49,7 @@ class NCGL():
 		'''
 		
 		self.c1, self.c2 = c1,c2
-		self.a0 = 0.01
+		self.a0 = 0.75
 		
 		self.h = h
 		self.ic = ic
