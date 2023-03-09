@@ -10,9 +10,11 @@ This method was implemented for a multidimensional context, meaning 1D, 2D and 3
 
 ## Files
 
-The implementation file is [this](https://github.com/rsautter/Noisy-Complex-Ginzburg-Landau/blob/main/NCGL.py). 
+The implementation of SCGL is given by  [NCGL.py](https://github.com/rsautter/Noisy-Complex-Ginzburg-Landau/blob/main/NCGL.py). 
 
-Some example of iteration is presented [here](https://github.com/rsautter/Noisy-Complex-Ginzburg-Landau/blob/main/CGL_Example.ipynb).
+The noise generation algorithm is given by the [cNoise.py](https://github.com/rsautter/Noisy-Complex-Ginzburg-Landau/blob/main/cNoise.py)
+
+The examples are presented [here](https://github.com/rsautter/Noisy-Complex-Ginzburg-Landau/blob/main/CGL_Example.ipynb).
 
 The following video shows the  traditional Complex Ginzburg-Landau:
 
@@ -20,9 +22,14 @@ https://user-images.githubusercontent.com/14216783/224129416-69f13958-8244-4741-
 
 
 ## SCGL
-The additive noise iteration example is:
+An example of SCGL with additive noise is:
 
 https://user-images.githubusercontent.com/14216783/224137213-3b0a5406-c470-48c6-b131-187e2313415a.mp4
+
+An example of SCGL with multiplicative noise is:
+
+
+https://user-images.githubusercontent.com/14216783/224166543-ab332e49-3d7c-4383-862e-034d7d6e3227.mp4
 
 
 ## Noise Examples
