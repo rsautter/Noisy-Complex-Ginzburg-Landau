@@ -14,12 +14,15 @@ The implementation file is [this](https://github.com/rsautter/Noisy-Complex-Ginz
 
 Some example of iteration is presented [here](https://github.com/rsautter/Noisy-Complex-Ginzburg-Landau/blob/main/CGL_Example.ipynb).
 
-
+The following video shows the  traditional Complex Ginzburg-Landau:
 
 https://user-images.githubusercontent.com/14216783/224129416-69f13958-8244-4741-9cf3-d6b9e51144e2.mp4
 
 
 ## SCGL
+The additive noise iteration example is:
+
+https://user-images.githubusercontent.com/14216783/224137213-3b0a5406-c470-48c6-b131-187e2313415a.mp4
 
 
 ## Noise Examples
@@ -27,7 +30,7 @@ https://user-images.githubusercontent.com/14216783/224129416-69f13958-8244-4741-
 
 ## Multidimension CGL
 
-Also available on [my youtube channel](https://youtu.be/tc63qzBIM7I)
+The multidimensional case is under development. The solution for the simplest case is:
 
 https://user-images.githubusercontent.com/14216783/224053529-af028b73-6f58-47f4-a0a4-0108392fa167.mp4
 
