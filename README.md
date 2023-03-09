@@ -39,6 +39,12 @@ https://user-images.githubusercontent.com/14216783/224166543-ab332e49-3d7c-4383-
 
 The multidimensional case is under development. The solution for the simplest case is:
 
+1D:
+
+<img src="https://raw.githubusercontent.com/rsautter/Noisy-Complex-Ginzburg-Landau/main/CGl1D.png" width=60% height=60%>
+
+3D:
+
 https://user-images.githubusercontent.com/14216783/224053529-af028b73-6f58-47f4-a0a4-0108392fa167.mp4
 
 ## Paper link
