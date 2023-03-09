@@ -31,11 +31,12 @@ class NCGL():
 
 	'''
 
-	def __init__(self, c1=1.0, c2=1.0,h=1.0, msize = 128, ic='r', sigma_r= 1.0, noiseSpeed=1.0, noiseType='multiplicative', noiseArgs=None):
+	def __init__(self, c1=1.0, c2=1.0,h=1.0, msize = 128, ic='r', sigma_r= 1.0, noiseType='multiplicative', noiseArgs=None,dim=2):
 		'''
 		Spatial parameters:
 			ic = initial condition('r', 'g')
 			h - grid spacing
+			dim - dimension of the data (integer)
 
 		GL parameters:
 			c1 - diffusion parameter - (1+ib)Nabla A
@@ -53,10 +54,9 @@ class NCGL():
 		self.h = h
 		self.ic = ic
 		self.msize = msize
-		self.dim = 2
+		self.dim = dim
 		self.sigma_r = sigma_r
 		self.noiseType = noiseType
-		self.noiseSpeed = noiseSpeed
 		if noiseArgs is None:
 			self.noiseArgs = {}
 		else:
@@ -104,13 +104,10 @@ class NCGL():
 			k4 = self.reaction((at+dt*k3), t+dt)
 			at = at + dt*(k1+2*k2+2*k3+k4)/6.
 		return np.array(states)
-		
+
+	'''		
 	def getNoisyLyapReaction(self,a0=None,beta=0,dt=0.1, nit=3000):
-		'''
-		Returns the lyapunov exponent (spatial part is ignored)
-		
-		The function integrates with rk4 method
-		'''
+
 		lyap = []
 		delta = 1e-6*(np.random.rand()-0.5)
 		if a0 is None:
@@ -119,12 +116,14 @@ class NCGL():
 			at = a0
 		
 		eta = cNoise.cNoise(beta=beta,shape=(nit+2,),std=1)
+		eta2 = eta.copy()
 		eta = np.gradient(eta)
-		eta2 = np.gradient(eta)
+		
 		
 		last = a0
 		state = np.identity(3)
 		lyapSpec=[]
+		deltas = []
 		for i in range(nit):
 			a = np.real(at)
 			b = np.imag(at)
@@ -135,7 +134,7 @@ class NCGL():
 				jac = [
 					[1-3*(a**2)-b**2+2*a*b*c+self.sigma_r*eta[i], 	-2*a*b+(a**2)*c+3*(b**2)*c,		self.sigma_r*a-self.sigma_r*b],
 					[-2*a*b-3*(a**2)*c-(b**2)*c, 	1-a**2-3*(b**2)-2*a*b*c+self.sigma_r*eta[i],		self.sigma_r*a+self.sigma_r*b],
-					[0, 		0, 			np.abs(eta2[i]) ]
+					[0, 		0, 			np.exp(eta2[i]) ]
 				]
 				
 				k1 = self.reaction(at,t)+self.sigma_r*at*self.__interpolate1D(eta,i)
@@ -153,7 +152,7 @@ class NCGL():
 				jac = [
 					[1-3*(a**2)-b**2+2*a*b*c, 	-2*a*b+(a**2)*c+3*(b**2)*c,		self.sigma_r],
 					[-2*a*b-3*(a**2)*c-(b**2)*c, 	1-a**2-3*(b**2)-2*a*b*c,		0],
-					[0, 		0, 				np.abs(eta2[i])  ]
+					[0, 		0, 				np.exp(eta2[i])  ]
 				]
 				k1 = self.reaction(at,t)+self.sigma_r*self.__interpolate1D(eta,i)				
 				k11 = np.dot(jac,state)
@@ -170,11 +169,57 @@ class NCGL():
 			at = at + dt*(k1+2*k2+2*k3+k4)/6.
 			state = state + dt*(k11+2*k22+2*k33+k44)/6.
 			#print(np.abs(at-last))
+			deltas.append(np.abs(at-last)/dt)
 			state, r = np.linalg.qr(state) 
 			lyapSpec.append(np.abs(np.diag(r)))
 			last = at
-		return np.average(np.log(lyapSpec[-nit//4:]),axis=0)/dt
-				
+		return np.average(np.log(lyapSpec[-nit//4:]),axis=0)/dt, np.max(deltas)
+	'''			
+	
+	def getNoisyLyapReaction(self,a0=None,beta=0,dt=0.1, nit=3000,eps=1e-5):
+
+		lyap = []
+		delta = 1e-6*(np.random.rand()-0.5)
+		if a0 is None:
+			at = self.a0+delta
+		else:
+			at = a0
+		
+		eta = cNoise.cNoise(beta=beta,shape=(nit+2,),std=1)
+		eta = np.gradient(eta)
+		
+		lyapSpec=[]
+		deltas = []
+		for i in range(nit):
+			t = i*dt
+			angle = 2.0*np.pi*np.random.rand()
+			at2 = at+eps*np.cos(angle)+eps*np.sin(angle)*1j
+			if self.noiseType == 'multiplicative':
+				k1 = self.reaction(at,t)+self.sigma_r*at*self.__interpolate1D(eta,i)
+				k2 = self.reaction((at+dt*k1/2), t+dt/2.)+self.sigma_r*(at+dt*k1/2)*self.__interpolate1D(eta,i+0.5)
+				k3 = self.reaction((at+dt*k2/2), t+dt/2.)+self.sigma_r*(at+dt*k2/2)*self.__interpolate1D(eta,i+0.5)
+				k4 = self.reaction((at+dt*k3), t+dt)+self.sigma_r*(at+dt*k3)*self.__interpolate1D(eta,i+1)
+			else:
+				k1 = self.reaction(at,t)+self.sigma_r*self.__interpolate1D(eta,i)				
+				k2 = self.reaction((at+dt*k1/2), t+dt/2.)+self.sigma_r*self.__interpolate1D(eta,i+0.5)
+				k3 = self.reaction((at+dt*k2/2), t+dt/2.)+self.sigma_r*self.__interpolate1D(eta,i+0.5)
+				k4 = self.reaction((at+dt*k3), t+dt)+self.sigma_r*self.__interpolate1D(eta,i+1)
+			at = at + dt*(k1+2*k2+2*k3+k4)/6.
+			
+			if self.noiseType == 'multiplicative':
+				k1 = self.reaction(at2,t)+self.sigma_r*at2*self.__interpolate1D(eta,i)
+				k2 = self.reaction((at2+dt*k1/2), t+dt/2.)+self.sigma_r*(at2+dt*k1/2)*self.__interpolate1D(eta,i+0.5)
+				k3 = self.reaction((at2+dt*k2/2), t+dt/2.)+self.sigma_r*(at2+dt*k2/2)*self.__interpolate1D(eta,i+0.5)
+				k4 = self.reaction((at2+dt*k3), t+dt)+self.sigma_r*(at2+dt*k3)*self.__interpolate1D(eta,i+1)
+			else:
+				k1 = self.reaction(at2,t)+self.sigma_r*self.__interpolate1D(eta,i)				
+				k2 = self.reaction((at2+dt*k1/2), t+dt/2.)+self.sigma_r*self.__interpolate1D(eta,i+0.5)
+				k3 = self.reaction((at2+dt*k2/2), t+dt/2.)+self.sigma_r*self.__interpolate1D(eta,i+0.5)
+				k4 = self.reaction((at2+dt*k3), t+dt)+self.sigma_r*self.__interpolate1D(eta,i+1)
+			at2 = at2 + dt*(k1+2*k2+2*k3+k4)/6.
+			
+			deltas.append(np.abs(at-at2)/eps)
+		return np.log(np.min(deltas))/dt, np.log(np.average(deltas))/dt, np.log(np.max(deltas))/dt		
 	
 	def __interpolate1D(self,noise,t):
 		p1, p2 = int(np.floor(t)),int(np.ceil(t))
@@ -182,6 +227,7 @@ class NCGL():
 			return noise[p1]
 		else:
 			return noise[p1]*np.abs(t-p1)/np.abs(p1-p2) + noise[p2]*np.abs(t-p2)/np.abs(p1-p2)
+	
 	
 	def getNoisyChainedSingleReaction(self,a0=None,beta=0,dt=0.1, nit=3000):
 		'''
@@ -225,7 +271,6 @@ class NCGL():
 		
 		return the slice of nr and ni at the given time
 		'''
-		
 		t = np.linspace(0,1,self.nr1.shape[0])
 		p1, p2 = int(np.floor((self.nr1.shape[0]-1)*time)),int(np.ceil((self.nr1.shape[0]-1)*time))
 		
@@ -234,16 +279,11 @@ class NCGL():
 		mr1 = self.nr1[p1]
 		mr2 = self.nr1[p2]
 		
-		md1 = self.nr2[p1]
-		md2 = self.nr2[p2]
-		
 		if np.abs(t1-t2)<1e-15:
 			mr3 = mr1
-			md3 = md1
 		else:
 			mr3 = np.abs(t1-time)*mr1/(np.abs(t2-t1))+np.abs(t2-time)*mr2/(np.abs(t2-t1))
-			md3 = np.abs(t1-time)*md1/(np.abs(t2-t1))+np.abs(t2-time)*md2/(np.abs(t2-t1))
-		return mr3, md3
+		return mr3
 		
 		
 	def solveRKF45(self,dt,ntimes,stepsave,dtTolerace=1e-4):
@@ -268,9 +308,11 @@ class NCGL():
 			std = self.noiseArgs['std']
 		else:
 			std = 0.01
-		self.nr1 = cNoise.cNoise(beta=exponent,shape=(int(self.noiseSpeed*ntimes),self.msize,self.msize),std=std)
-		self.nr2 = self.nr1.copy()
-		self.nr1, _, _ = np.gradient(self.nr1)
+		noiseShape = [ntimes]
+		for i in range(self.dim):
+			noiseShape.append(self.msize)
+		self.nr1 = cNoise.cNoise(beta=exponent,shape=tuple(noiseShape),std=std)
+		self.nr1 = np.gradient(self.nr1)[0]
 			
 		self.maxTime = (ntimes+2)*dt
 				
@@ -310,22 +352,33 @@ class NCGL():
 		
 	def timeDerivatives(self,state,time):
 		
-		#PseudoSpectral approach:
-		fx  = 2*np.pi*fftfreq(state.shape[0])
-		fy  = 2*np.pi*fftfreq(state.shape[1])
-		
 		rFtState = fftn(np.real(state))
 		iFtState = fftn(np.imag(state))
 		normalizedTime = time/self.maxTime
 		
+		tnr1 = self.interpolateNoise(normalizedTime)
 		
-		tnr1,tnr2 = self.interpolateNoise(normalizedTime)
+		# spectral shift variables
+		specR = np.zeros(state.shape)
+		specI = np.zeros(state.shape)
 		
-		lap  =    np.real(ifftn(-(fx[None,:]**2)*rFtState -(fy[:,None]**2)* rFtState )) + 1j*np.real(ifftn(-(fx[None,:]**2)*iFtState -(fy[:,None]**2)* iFtState ))/(self.h**2)
+		# for every frequency dimension, updates the shift variable
+		for i in range(len(state.shape)):
+			
+			# changing the dimension of the measured frequency since numpy's fftfreq is always 1D
+			seq = np.ones(len(state.shape)).astype(int)
+			fx  = 2*np.pi*fftfreq(state.shape[i])
+			seq[i] = len(fx)
+			fx = fx.reshape(*tuple(seq))
+			
+			#makes the shift
+			specR = specR - (fx**2)*rFtState
+			specI = specI - (fx**2)*iFtState
+			
+		# measures the laplacian from pseudospectral method
+		lap  =    np.real(ifftn(specR)) + 1j*np.real(ifftn(specI))/(self.h**2)
 		
-		if self.noiseType == 'diffusive':
-			return (1+self.c1*1j)*np.array(lap) + self.reaction(state,time) + self.sigma_r*lap*tnr2/np.abs(lap)
-		elif self.noiseType == 'multiplicative':
-			return (1+self.c1*1j)*np.array(lap) + self.reaction(state,time) + self.sigma_r*state*(tnr1 + 1j*tnr1)
+		if self.noiseType == 'multiplicative':
+			return (1+self.c1*1j)*np.array(lap) + self.reaction(state,time) + self.sigma_r*state*tnr1
 		else:
-			return (1+self.c1*1j)*np.array(lap) + self.reaction(state,time) + self.sigma_r*(tnr1 + 1j*tnr1)
+			return (1+self.c1*1j)*np.array(lap) + self.reaction(state,time) + self.sigma_r*tnr1
