@@ -32,7 +32,12 @@ An example of SCGL with multiplicative noise is:
 https://user-images.githubusercontent.com/14216783/224166543-ab332e49-3d7c-4383-862e-034d7d6e3227.mp4
 
 
-## Noise Examples
+## GPA
+
+We also present a Gradient Pattern Analysis ([GPA](https://en.wikipedia.org/wiki/Gradient_pattern_analysis)) of the system. The implementation is public available [here](https://github.com/rsautter/GPA). The following video shows the real, imaginary and modulus at every snapshot, and the histogram of amplitudes. The series bellow the snapshot shows the second Gradient Moment metric ($G_2$), and the dashed line is the respective time.
+
+
+https://user-images.githubusercontent.com/14216783/224458069-a3de01b8-b47c-46b2-9cc5-b120e29f3066.mp4
 
 
 ## Multidimension CGL
