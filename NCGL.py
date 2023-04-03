@@ -31,7 +31,7 @@ class NCGL():
 
 	'''
 
-	def __init__(self, c1=1.0, c2=1.0,h=1.0, msize = 128, ic='r', sigma_r= 1.0, noiseType='multiplicative', noiseArgs=None,dim=2):
+	def __init__(self, c1=1.0, c2=1.0,h=1.0, msize = 128, ic='r', sigma_r= 1.0, noiseType='multiplicative', noiseArgs=None,a0=1.0,b0=0.0,dim=2):
 		'''
 		Spatial parameters:
 			ic = initial condition('r', 'g')
@@ -49,7 +49,8 @@ class NCGL():
 		'''
 		
 		self.c1, self.c2 = c1,c2
-		self.a0 = 0.75
+		self.a0 = a0
+		self.b0 = b0
 		
 		self.h = h
 		self.ic = ic
@@ -74,7 +75,7 @@ class NCGL():
 		
 	def getInitialCondition(self):
 		if self.ic=='r':
-			self.a = self.a0*((self.__getRandom(self.msize,self.dim)-0.5)+1j*(self.__getRandom(self.msize,self.dim)-0.5))
+			self.a = 2*self.a0*((self.__getRandom(self.msize,self.dim)-0.5)+1j*(self.__getRandom(self.msize,self.dim)-0.5))+self.b0
 		else:
 			self.a = self.a0*(self.__getGaussian(self.msize,self.dim)+1j*self.__getGaussian(self.msize,self.dim))
 			
@@ -286,7 +287,7 @@ class NCGL():
 		return mr3
 		
 		
-	def solveRKF45(self,dt,ntimes,stepsave,dtTolerace=1e-4):
+	def solveRKF45(self,dt,ntimes,stepsave,dtTolerace=1e-5):
 		state = self.getInitialCondition()
 		times = []
 		states = [state]	
@@ -317,23 +318,9 @@ class NCGL():
 		self.maxTime = (ntimes+2)*dt
 				
 		for time in tqdm.tqdm(range(ntimes)):
-		
-			step = dt
-			
-			k1 = step*self.timeDerivatives(state,								t		)
-			k2 = step*self.timeDerivatives(state+k1*w[1,0], 		        				t+step/4	)
-			k3 = step*self.timeDerivatives(state+k1*w[2,0]+k2*w[2,1], 					t+3*step/8	)
-			k4 = step*self.timeDerivatives(state+k1*w[3,0]+k2*w[3,1]+k3*w[3,2],    				t+12*step/13	)
-			k5 = step*self.timeDerivatives(state+k1*w[4,0]+k2*w[4,1]+k3*w[4,2]+k4*w[4,3],    		t+step		)
-			k6 = step*self.timeDerivatives(state+k1*w[5,0]+k2*w[5,1]+k3*w[5,2]+k4*w[5,3]+k5*w[5,4],    	t+step/2	)
-			
-			approach4 = state + (25/216)*k1 + (1408/2565)*k3 + (2197/4101)*k4 -k5/5
-			approach5 = state + (16/135)*k1 + (6656/12825)*k3 + (28561/56430)*k4 - (9/50)*k5 + (2/55)*k6
-			
-			error = np.max(np.abs(approach4-approach5))
-			if error> dtTolerace:
-				step = dt*((dtTolerace/(2*error))**.25)
-			
+			while t < time*dt:
+				step = dt
+				
 				k1 = step*self.timeDerivatives(state,								t		)
 				k2 = step*self.timeDerivatives(state+k1*w[1,0], 		        				t+step/4	)
 				k3 = step*self.timeDerivatives(state+k1*w[2,0]+k2*w[2,1], 					t+3*step/8	)
@@ -342,9 +329,24 @@ class NCGL():
 				k6 = step*self.timeDerivatives(state+k1*w[5,0]+k2*w[5,1]+k3*w[5,2]+k4*w[5,3]+k5*w[5,4],    	t+step/2	)
 				
 				approach4 = state + (25/216)*k1 + (1408/2565)*k3 + (2197/4101)*k4 -k5/5
+				approach5 = state + (16/135)*k1 + (6656/12825)*k3 + (28561/56430)*k4 - (9/50)*k5 + (2/55)*k6
 				
-			t += step
-			state = approach4 
+				error = np.max(np.abs(approach4-approach5))
+				if error> dtTolerace:
+					step = dt*((dtTolerace/(2*error))**.25)
+				
+					k1 = step*self.timeDerivatives(state,								t		)
+					k2 = step*self.timeDerivatives(state+k1*w[1,0], 		        				t+step/4	)
+					k3 = step*self.timeDerivatives(state+k1*w[2,0]+k2*w[2,1], 					t+3*step/8	)
+					k4 = step*self.timeDerivatives(state+k1*w[3,0]+k2*w[3,1]+k3*w[3,2],    				t+12*step/13	)
+					k5 = step*self.timeDerivatives(state+k1*w[4,0]+k2*w[4,1]+k3*w[4,2]+k4*w[4,3],    		t+step		)
+					k6 = step*self.timeDerivatives(state+k1*w[5,0]+k2*w[5,1]+k3*w[5,2]+k4*w[5,3]+k5*w[5,4],    	t+step/2	)
+					
+					approach4 = state + (25/216)*k1 + (1408/2565)*k3 + (2197/4101)*k4 -k5/5
+					
+				t += step
+				state = approach4 
+			
 			times.append(t)
 			if time in stepsave:
 				states.append(state)
