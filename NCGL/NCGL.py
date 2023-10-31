@@ -6,7 +6,7 @@ import itertools
 import tqdm as tqdm
 from collections import namedtuple
 from scipy.signal import convolve2d
-import .cNoise
+import cNoise
 from scipy.interpolate import interp1d
 
 class NCGL():
