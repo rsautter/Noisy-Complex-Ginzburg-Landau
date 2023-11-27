@@ -312,8 +312,9 @@ class NCGL():
 		noiseShape = [ntimes]
 		for i in range(self.dim):
 			noiseShape.append(self.msize)
-		self.nr1 = cNoise(beta=exponent,shape=tuple(noiseShape),std=std)
-		self.nr1 = np.gradient(self.nr1)[0]
+		if np.abs(self.sigma_r) > 1e-12:
+			self.nr1 = cNoise(beta=exponent,shape=tuple(noiseShape),std=std)
+			self.nr1 = np.gradient(self.nr1)[0]
 			
 		self.maxTime = (ntimes+2)*dt
 				
@@ -358,7 +359,8 @@ class NCGL():
 		iFtState = fftn(np.imag(state))
 		normalizedTime = time/self.maxTime
 		
-		tnr1 = self.interpolateNoise(normalizedTime)
+		if np.abs(self.sigma_r) > 1e-12:
+			tnr1 = self.interpolateNoise(normalizedTime)
 		
 		# spectral shift variables
 		specR = np.zeros(state.shape)
@@ -380,7 +382,10 @@ class NCGL():
 		# measures the laplacian from pseudospectral method
 		lap  =    np.real(ifftn(specR)) + 1j*np.real(ifftn(specI))/(self.h**2)
 		
-		if self.noiseType == 'multiplicative':
-			return (1+self.c1*1j)*np.array(lap) + self.reaction(state,time) + self.sigma_r*state*tnr1
-		else:
-			return (1+self.c1*1j)*np.array(lap) + self.reaction(state,time) + self.sigma_r*tnr1
+		if np.abs(self.sigma_r) > 1e-12:
+			if self.noiseType == 'multiplicative':
+				return (1+self.c1*1j)*np.array(lap) + self.reaction(state,time) + self.sigma_r*state*tnr1
+			else:
+				return (1+self.c1*1j)*np.array(lap) + self.reaction(state,time) + self.sigma_r*tnr1
+		else:# noiseless case
+			return (1+self.c1*1j)*np.array(lap) + self.reaction(state,time)
