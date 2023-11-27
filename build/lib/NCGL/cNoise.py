@@ -1,7 +1,7 @@
 from numpy.random import normal
 import numpy as np
 
-def cNoise(beta,shape=(1024,),std=0.001, maxCorrections=10,maxAvgError=0.01, eta=0.6):
+def cNoise(beta,shape=(1024,),std=0.001, maxCorrections=10,maxAvgError=0.01, eta=0.6,verbose=False):
     '''
        Wrote by: Rubens Andreas Sautter (2021)
        
@@ -112,8 +112,8 @@ def cNoise(beta,shape=(1024,),std=0.001, maxCorrections=10,maxAvgError=0.01, eta
         	
         # measuring the error
         smallCorrection = beta-np.average(betas)
-        
-        print("Noise error - ", smallCorrection)
+        if verbose:
+            print("Noise error - ", smallCorrection)
         decayCorrectionL.append(decayCorrection)
         errorL.append(smallCorrection)
     	
@@ -124,7 +124,8 @@ def cNoise(beta,shape=(1024,),std=0.001, maxCorrections=10,maxAvgError=0.01, eta
     
     # resampling with the best decay
     errorL = np.abs(errorL)
-    print("Best decay constant:", decayCorrectionL[np.argmin(errorL)]," Error: ",errorL[np.argmin(errorL)])
+    if verbose:
+        print("Best decay constant:", decayCorrectionL[np.argmin(errorL)]," Error: ",errorL[np.argmin(errorL)])
     decayCorrection = decayCorrectionL[np.argmin(errorL)]
     scaling = (freqs[not0Freq]+0j)**(-(beta*decayCorrection)/2)
     generatedSpectrum = ftSample.copy()
